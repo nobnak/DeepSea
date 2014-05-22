@@ -1,12 +1,12 @@
 ﻿Shader "Custom/DeepSea" {
 	Properties {
-		_MainTex ("Particle Texture", 2D) = "white" {}
-		_InvFade ("Soft Particles Factor", Range(0.01,3.0)) = 1.0
-		_TintColor ("Color", Color) = (1, 1, 1, 1)
+		_SkyColor ("Sky Color", Color) = (0, 0, 0, 0)
+		_SeaColor ("Sea Color", Color) = (1, 1, 1, 1)
+		_Absorb ("Absorption Facor", Float) = 1.0
 	}
 	SubShader {
 		Tags { "RenderType"="Transparent" "Queue"="Transparent" "IgnoreProjector"="True" }
-		Blend SrcAlpha OneMinusSrcAlpha
+		Blend One OneMinusSrcAlpha
 		Cull Off Lighting Off ZWrite Off Fog { Color (0,0,0,0) }
 		
 		Pass {
@@ -15,11 +15,10 @@
 			#pragma vertex vert
 			#pragma fragment frag
 			#include "UnityCG.cginc"
-
-			sampler2D _MainTex;
-			float4 _MainTex_ST;
-			float _InvFade;
-			fixed4 _TintColor;
+			
+			fixed4 _SkyColor;
+			fixed4 _SeaColor;
+			float _Absorb;
 			sampler2D _CameraDepthTexture;
 
 			struct vs {
@@ -42,10 +41,11 @@
 			float4 frag(vs2ps IN) : COLOR {
 				float sceneZ = LinearEyeDepth(tex2Dproj(_CameraDepthTexture, UNITY_PROJ_COORD(IN.proj)).r);
 				float partZ = IN.proj.z;
-				float fade = saturate (_InvFade * (sceneZ-partZ));
+				float dist = (sceneZ-partZ);
 				
-				float4 c = _TintColor;
-				c.a *= fade;
+				float4 c = _SeaColor;
+				c.a *= saturate(1.0 - exp(-_Absorb * dist));
+				c.rgb = c.rgb * c.a + _SkyColor;
 				return c;
 			}			
 			ENDCG
